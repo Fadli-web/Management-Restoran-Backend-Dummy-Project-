@@ -23,3 +23,6 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server berjalan di http://localhost:${PORT}`);
 });
+
+// TAMBAHKAN BARIS INI UNTUK VERCEL:
+module.exports = app;

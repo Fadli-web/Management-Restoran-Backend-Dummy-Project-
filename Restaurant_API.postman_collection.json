@@ -8,33 +8,51 @@
   "variable": [
     {
       "key": "baseUrl",
+      "value": "https://management-restoran-p.vercel.app",
+      "type": "string",
+      "description": "URL Server utama (Ganti ke http://localhost:5000 jika testing di lokal)"
+    },
+    {
+      "key": "baseUrlLocal",
       "value": "http://localhost:5000",
-      "type": "string"
+      "type": "string",
+      "description": "URL Server Lokal Express"
+    },
+    {
+      "key": "baseUrlProduction",
+      "value": "https://management-restoran-p.vercel.app",
+      "type": "string",
+      "description": "URL Server Live Vercel"
     },
     {
       "key": "token",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "Bearer Token JWT yang tersimpan otomatis setelah login"
     },
     {
       "key": "menu_id",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "ID menu yang otomatis tersimpan saat membuat menu baru"
     },
     {
       "key": "inventory_id",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "ID bahan baku yang otomatis tersimpan saat membuat inventaris baru"
     },
     {
       "key": "ingredient_id",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "ID relasi resep bahan menu yang otomatis tersimpan"
     },
     {
       "key": "order_id",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "ID transaksi pesanan yang otomatis tersimpan"
     }
   ],
   "item": [

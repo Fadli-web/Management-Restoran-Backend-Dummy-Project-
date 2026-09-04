@@ -35,7 +35,8 @@ app.get('/', (req, res) => {
             auth: {
                 register: 'POST /api/auth/register',
                 login: 'POST /api/auth/login',
-                profile: 'GET /api/auth/me'
+                profile: 'GET /api/auth/me',
+                update_profile: 'PUT /api/auth/profile (Nama, Email, Password, Foto)'
             },
             menus: {
                 list: 'GET /api/menus',

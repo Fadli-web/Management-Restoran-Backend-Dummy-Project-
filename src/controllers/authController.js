@@ -137,6 +137,7 @@ exports.login = async (req, res) => {
                     full_name: user.full_name,
                     email: user.email,
                     role: user.role,
+                    avatar_url: user.avatar_url || null,
                     created_at: user.created_at
                 },
                 token
@@ -155,11 +156,22 @@ exports.login = async (req, res) => {
  */
 exports.getProfile = async (req, res) => {
     try {
-        const { data: user, error } = await supabase
+        let { data: user, error } = await supabase
             .from('users')
-            .select('id, full_name, email, role, created_at')
+            .select('id, full_name, email, role, avatar_url, created_at')
             .eq('id', req.user.id)
             .maybeSingle();
+
+        // Fallback jika kolom avatar_url belum ditambahkan di database
+        if (error && error.message && error.message.includes('avatar_url')) {
+            const fallback = await supabase
+                .from('users')
+                .select('id, full_name, email, role, created_at')
+                .eq('id', req.user.id)
+                .maybeSingle();
+            user = fallback.data;
+            error = fallback.error;
+        }
 
         if (error || !user) {
             return res.status(404).json({
@@ -171,6 +183,140 @@ exports.getProfile = async (req, res) => {
         res.status(200).json({
             status: 'success',
             data: user
+        });
+    } catch (err) {
+        res.status(500).json({
+            status: 'error',
+            message: 'Terjadi kesalahan pada server: ' + err.message
+        });
+    }
+};
+
+/**
+ * Memperbarui profil pengguna aktif (Nama, Email, Password, dan Foto Profil)
+ */
+exports.updateProfile = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { full_name, email, password, current_password, avatar_url } = req.body;
+
+        // 1. Ambil data user yang ada
+        const { data: user, error: findError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (findError || !user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Pengguna tidak ditemukan'
+            });
+        }
+
+        const updateData = {};
+
+        // 2. Update Nama
+        if (full_name && full_name.trim()) {
+            updateData.full_name = full_name.trim();
+        }
+
+        // 3. Update Email (cek apakah email baru sudah dipakai orang lain)
+        if (email && email.trim().toLowerCase() !== user.email.toLowerCase()) {
+            const { data: existingUser } = await supabase
+                .from('users')
+                .select('id')
+                .eq('email', email.trim().toLowerCase())
+                .neq('id', userId)
+                .maybeSingle();
+
+            if (existingUser) {
+                return res.status(409).json({
+                    status: 'error',
+                    message: 'Email baru sudah digunakan oleh akun lain. Silakan pilih email berbeda.'
+                });
+            }
+            updateData.email = email.trim().toLowerCase();
+        }
+
+        // 4. Update Password (jika diisi)
+        if (password && password.trim()) {
+            // Verifikasi password saat ini jika ada
+            if (current_password) {
+                const isMatch = await bcrypt.compare(current_password, user.password);
+                if (!isMatch) {
+                    return res.status(400).json({
+                        status: 'error',
+                        message: 'Password lama (saat ini) salah. Silakan periksa kembali.'
+                    });
+                }
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            updateData.password = await bcrypt.hash(password.trim(), salt);
+        }
+
+        // 5. Update Foto Profil / Avatar (jika ada file diunggah via multipart atau kirim string url)
+        if (req.file) {
+            updateData.avatar_url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        } else if (avatar_url !== undefined) {
+            updateData.avatar_url = avatar_url || null;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Tidak ada perubahan data yang dikirim.'
+            });
+        }
+
+        // 6. Jalankan update ke Supabase
+        let { data: updatedUser, error: updateError } = await supabase
+            .from('users')
+            .update(updateData)
+            .eq('id', userId)
+            .select('id, full_name, email, role, avatar_url, created_at')
+            .maybeSingle();
+
+        // Jika kolom avatar_url belum ada di database, ulangi tanpa avatar_url
+        if (updateError && updateError.message && updateError.message.includes('avatar_url')) {
+            delete updateData.avatar_url;
+            const fallback = await supabase
+                .from('users')
+                .update(updateData)
+                .eq('id', userId)
+                .select('id, full_name, email, role, created_at')
+                .maybeSingle();
+            updatedUser = fallback.data;
+            updateError = fallback.error;
+        }
+
+        if (updateError) {
+            return res.status(500).json({
+                status: 'error',
+                message: 'Gagal memperbarui profil: ' + updateError.message
+            });
+        }
+
+        // 7. Buat token JWT baru dengan data terbaru
+        const newToken = jwt.sign(
+            {
+                id: updatedUser.id,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                full_name: updatedUser.full_name
+            },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Profil berhasil diperbarui',
+            data: {
+                user: updatedUser,
+                token: newToken
+            }
         });
     } catch (err) {
         res.status(500).json({

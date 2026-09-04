@@ -58,6 +58,9 @@ UPDATE menus SET category = 'minuman' WHERE (name ILIKE '%kopi%' OR name ILIKE '
 UPDATE menus SET category = 'snack' WHERE (name ILIKE '%snack%' OR name ILIKE '%camilan%' OR name ILIKE '%keripik%' OR name ILIKE '%kentang%' OR name ILIKE '%roti%') AND (category IS NULL OR category = '' OR category = 'makanan');
 UPDATE menus SET category = 'makanan' WHERE category IS NULL OR category = '';
 
+-- 6. TAMBAHKAN KOLOM AVATAR_URL PADA TABEL USERS (Foto Profil)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT NULL;
+
 -- ==========================================================
 -- Selesai. Tabel siap digunakan oleh Backend Express V2.
 -- ==========================================================

@@ -2,10 +2,16 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Pastikan direktori uploads ada
-const uploadDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+// Di Vercel serverless environment, file system bersifat read-only kecuali direktori /tmp
+const isVercel = Boolean(process.env.VERCEL);
+const uploadDir = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, '../../uploads');
+
+try {
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    }
+} catch (err) {
+    console.warn('Peringatan: Tidak dapat membuat direktori uploads:', err.message);
 }
 
 // Konfigurasi penyimpanan disk

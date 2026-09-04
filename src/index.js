@@ -16,7 +16,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Sajikan folder uploads secara statis untuk akses gambar
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+const isVercel = Boolean(process.env.VERCEL);
+const uploadStaticDir = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadStaticDir));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -78,7 +80,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     app.listen(PORT, () => {
         console.log(`Server berjalan di http://localhost:${PORT}`);
     });

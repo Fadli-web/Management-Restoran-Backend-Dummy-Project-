@@ -1,30 +1,10 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
-// Di Vercel serverless environment, file system bersifat read-only kecuali direktori /tmp
-const isVercel = Boolean(process.env.VERCEL);
-const uploadDir = isVercel ? path.join('/tmp', 'uploads') : path.join(__dirname, '../../uploads');
-
-try {
-    if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-    }
-} catch (err) {
-    console.warn('Peringatan: Tidak dapat membuat direktori uploads:', err.message);
-}
-
-// Konfigurasi penyimpanan disk
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, `img-${uniqueSuffix}${ext}`);
-    }
-});
+// Gunakan memoryStorage agar file tersedia sebagai Buffer di req.file.buffer
+// Ini diperlukan agar bisa di-upload ke Supabase Storage (cloud) dan tidak bergantung
+// pada file system Vercel yang bersifat ephemeral (/tmp hilang setelah cold start)
+const storage = multer.memoryStorage();
 
 // Filter tipe file gambar
 const fileFilter = (req, file, cb) => {
@@ -45,4 +25,3 @@ const upload = multer({
 });
 
 module.exports = upload;
-

@@ -256,9 +256,40 @@ exports.updateProfile = async (req, res) => {
             updateData.password = await bcrypt.hash(password.trim(), salt);
         }
 
-        // 5. Update Foto Profil / Avatar (jika ada file diunggah via multipart atau kirim string url)
+        // 5. Update Foto Profil / Avatar
         if (req.file) {
-            updateData.avatar_url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            // Coba upload ke bucket Supabase Storage jika ada
+            let uploadedUrl = null;
+            try {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const ext = (req.file.originalname && req.file.originalname.split('.').pop()) || 'png';
+                const filename = `avatar-${userId}-${uniqueSuffix}.${ext.toLowerCase()}`;
+                
+                const { data: storageData, error: storageError } = await supabase.storage
+                    .from('restaurant-uploads')
+                    .upload(filename, req.file.buffer, {
+                        contentType: req.file.mimetype || 'image/jpeg',
+                        upsert: true
+                    });
+
+                if (!storageError && storageData) {
+                    const { data: pubData } = supabase.storage.from('restaurant-uploads').getPublicUrl(filename);
+                    if (pubData && pubData.publicUrl) {
+                        uploadedUrl = pubData.publicUrl;
+                    }
+                }
+            } catch (storageCatch) {
+                // Lewati jika Supabase Storage bucket belum dibuat
+            }
+
+            // Jika Supabase Storage bucket belum aktif, simpan sebagai Data URI (Base64) permanen di DB Supabase
+            if (uploadedUrl) {
+                updateData.avatar_url = uploadedUrl;
+            } else if (req.file.buffer) {
+                const mime = req.file.mimetype || 'image/jpeg';
+                const base64 = req.file.buffer.toString('base64');
+                updateData.avatar_url = `data:${mime};base64,${base64}`;
+            }
         } else if (avatar_url !== undefined) {
             updateData.avatar_url = avatar_url || null;
         }

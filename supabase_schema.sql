@@ -42,6 +42,22 @@ ALTER TABLE menus DISABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
 
+-- 5. TAMBAHKAN KOLOM KATEGORI PADA TABEL MENUS (makanan, minuman, snack)
+ALTER TABLE menus ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'makanan';
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'menus_category_check'
+    ) THEN
+        ALTER TABLE menus ADD CONSTRAINT menus_category_check CHECK (category IN ('makanan', 'minuman', 'snack'));
+    END IF;
+END $$;
+
+-- Update otomatis menu lama jika kategori belum terisi
+UPDATE menus SET category = 'minuman' WHERE (name ILIKE '%kopi%' OR name ILIKE '%teh%' OR name ILIKE '%juice%' OR name ILIKE '%coffee%' OR name ILIKE '%jelly%' OR name ILIKE '%drink%' OR name ILIKE '%es %' OR name ILIKE '%air%') AND (category IS NULL OR category = '' OR category = 'makanan');
+UPDATE menus SET category = 'snack' WHERE (name ILIKE '%snack%' OR name ILIKE '%camilan%' OR name ILIKE '%keripik%' OR name ILIKE '%kentang%' OR name ILIKE '%roti%') AND (category IS NULL OR category = '' OR category = 'makanan');
+UPDATE menus SET category = 'makanan' WHERE category IS NULL OR category = '';
+
 -- ==========================================================
 -- Selesai. Tabel siap digunakan oleh Backend Express V2.
 -- ==========================================================

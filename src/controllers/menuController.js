@@ -74,12 +74,17 @@ exports.createMenu = async (req, res) => {
             is_available = is_available === 'true' || is_available === '1';
         }
 
+        // Normalisasi category
+        let category = req.body.category || req.body.kategori || req.body.jenis || 'makanan';
+        if (!['makanan', 'minuman', 'snack'].includes(category)) category = 'makanan';
+
         const insertPayload = {
             name,
             description: description || '',
             price,
             is_available: is_available !== undefined ? is_available : true,
-            image_url: image_url || null
+            image_url: image_url || null,
+            category
         };
 
         const { data, error } = await supabase
@@ -115,13 +120,19 @@ exports.updateMenu = async (req, res) => {
         delete updateData.image;
         delete updateData.gambar;
         delete updateData.foto;
-        delete updateData.category;
         delete updateData.kategori;
         delete updateData.jenis;
         delete updateData.nama;
         delete updateData.nama_menu;
         delete updateData.harga;
         delete updateData.deskripsi;
+
+        // Normalisasi category jika dikirim
+        if (updateData.category !== undefined) {
+            if (!['makanan', 'minuman', 'snack'].includes(updateData.category)) {
+                updateData.category = 'makanan';
+            }
+        }
 
         if (updateData.price !== undefined && typeof updateData.price === 'string') {
             updateData.price = parseFloat(updateData.price);

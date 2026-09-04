@@ -1,0 +1,1087 @@
+{
+  "info": {
+    "_postman_id": "e9b41a37-4d7a-4fa8-b210-67a884bf031e",
+    "name": "Resto Backend V2 - Restaurant Management API",
+    "description": "Koleksi Postman REST API Lengkap untuk Backend Manajemen Restoran V2:\n\n1. 🔐 AUTENTIKASI & RBAC:\n   - Login/Register untuk Admin, Kasir, dan Koki.\n   - Dilengkapi skrip otomatis (Test Script) yang langsung menyimpan JWT Token ke variabel {{token}} saat login berhasil.\n\n2. 📸 DUKUNGAN GAMBAR MENU (2 OPSI):\n   - Opsi 1: Link URL langsung dari Google / Internet (JSON body).\n   - Opsi 2: Upload file gambar langsung dari komputer/HP (form-data multipart).\n   - Endpoint mandiri upload berkas: POST /api/upload.\n\n3. 📋 MENU & RESEP BAHAN (RECIPES):\n   - CRUD Menu makanan dan minuman.\n   - Pengaturan takaran resep bahan baku per menu (menu_ingredients).\n\n4. 📦 INVENTARIS & GUDANG DAPUR:\n   - Pemantauan stok bahan baku (kg, liter, butir, pcs).\n   - Penyesuaian kuantitas stok bahan dapur oleh Admin atau Koki.\n\n5. 🍽️ PESANAN DENGAN OTOMASI STOK:\n   - Pembuatan pesanan oleh Kasir/Admin.\n   - Sistem secara otomatis memverifikasi stok dan MEMOTONG STOK bahan baku inventaris.\n   - Jika pesanan dibatalkan (cancelled), sistem OTOMATIS MENGEMBALIKAN stok bahan ke inventaris.\n   - Pengubahan status memasak di dapur (pending -> cooking -> ready -> completed / cancelled).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "menu_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "inventory_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ingredient_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Status Server (Healthcheck)",
+      "item": [
+        {
+          "name": "Check Server Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Memeriksa apakah server Express berjalan normal dan melihat daftar seluruh rute endpoint yang tersedia."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Autentikasi (Auth & RBAC)",
+      "item": [
+        {
+          "name": "Register Akun Admin (Owner / Manajer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"full_name\": \"Owner Resto\",\n    \"email\": \"admin@resto.com\",\n    \"password\": \"admin12345\",\n    \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Mendaftarkan pengguna dengan peran Admin (Akses Penuh)."
+          },
+          "response": []
+        },
+        {
+          "name": "Register Akun Kasir",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"full_name\": \"Siti Kasir\",\n    \"email\": \"kasir@resto.com\",\n    \"password\": \"kasir12345\",\n    \"role\": \"kasir\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Mendaftarkan pengguna dengan peran Kasir (Front-of-House)."
+          },
+          "response": []
+        },
+        {
+          "name": "Register Akun Koki",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"full_name\": \"Chef Juna\",\n    \"email\": \"koki@resto.com\",\n    \"password\": \"koki12345\",\n    \"role\": \"koki\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Mendaftarkan pengguna dengan peran Koki (Kitchen Staff)."
+          },
+          "response": []
+        },
+        {
+          "name": "Login Admin (Auto-Save Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data && res.data.token) {",
+                  "        pm.collectionVariables.set(\"token\", res.data.token);",
+                  "        console.log(\"Token Admin berhasil disimpan ke variabel koleksi: {{token}}\");",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@resto.com\",\n    \"password\": \"admin12345\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login sebagai Admin. Token otomatis disimpan ke variabel {{token}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Login Kasir (Auto-Save Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data && res.data.token) {",
+                  "        pm.collectionVariables.set(\"token\", res.data.token);",
+                  "        console.log(\"Token Kasir berhasil disimpan ke variabel koleksi: {{token}}\");",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"kasir@resto.com\",\n    \"password\": \"kasir12345\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login sebagai Kasir. Token otomatis disimpan ke variabel {{token}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Login Koki (Auto-Save Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data && res.data.token) {",
+                  "        pm.collectionVariables.set(\"token\", res.data.token);",
+                  "        console.log(\"Token Koki berhasil disimpan ke variabel koleksi: {{token}}\");",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"koki@resto.com\",\n    \"password\": \"koki12345\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login sebagai Koki. Token otomatis disimpan ke variabel {{token}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile Pengguna Aktif (/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Mendapatkan profil pengguna yang sedang login berdasarkan Bearer Token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Upload Berkas Gambar (File Upload)",
+      "item": [
+        {
+          "name": "Upload Berkas Gambar Mandiri (POST /api/upload)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Pilih berkas file gambar JPG/PNG/WEBP/GIF dari laptop/HP Anda"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "upload"
+              ]
+            },
+            "description": "Mengunggah berkas gambar langsung ke server dan mengembalikan URL statis (misal: http://localhost:5000/uploads/img-xxx.jpg)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Manajemen Menu (Menus & Resep)",
+      "item": [
+        {
+          "name": "Get All Menus (Publik)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/menus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "menus"
+              ]
+            },
+            "description": "Melihat seluruh daftar menu makanan dan minuman beserta tautan gambarnya."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Menu By ID & Resep Bahan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/menus/{{menu_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "menus",
+                "{{menu_id}}"
+              ]
+            },
+            "description": "Melihat detail satu menu spesifik beserta daftar bahan baku resepnya."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Menu - OPSI 1: Link Gambar dari Google/Internet (JSON)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data && res.data.id) {",
+                  "        pm.collectionVariables.set(\"menu_id\", res.data.id);",
+                  "        console.log(\"menu_id berhasil disimpan:\", res.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Nasi Goreng Spesial\",\n    \"description\": \"Nasi goreng lezat dengan suwiran ayam, sosis, dan telur ceplok\",\n    \"price\": 25000,\n    \"is_available\": true,\n    \"image_url\": \"https://images.unsplash.com/photo-1603133872878-684f208fb84b\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/menus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "menus"
+              ]
+            },
+            "description": "OPSI 1: Menambahkan menu baru dengan mencantumkan tautan URL gambar dari Google Images atau Unsplash pada field image_url."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Menu - OPSI 2: Upload Berkas Gambar Langsung (form-data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data && res.data.id) {",
+                  "        pm.collectionVariables.set(\"menu_id\", res.data.id);",
+                  "        console.log(\"menu_id berhasil disimpan:\", res.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Ayam Geprek Sambal Korek",
+                  "type": "text"
+                },
+                {
+                  "key": "price",
+                  "value": "20000",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Ayam krispi renyah digeprek dengan sambal korek pedas gurih",
+                  "type": "text"
+                },
+                {
+                  "key": "is_available",
+                  "value": "true",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Pilih berkas file gambar JPG/PNG dari laptop/HP Anda"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/menus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "menus"
+              ]
+            },
+            "description": "OPSI 2: Menambahkan menu sekaligus mengunggah berkas file gambar langsung dari perangkat melalui form-data multipart."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Menu (Ganti Info / Ganti Link Gambar)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Nasi Goreng Spesial Jumbo\",\n    \"price\": 28000,\n    \"is_available\": true,\n    \"image_url\": \"https://images.unsplash.com/photo-1512058564366-18510be2db19\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/menus/{{menu_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "menus",
+                "{{menu_id}}"
+              ]
+            },
+            "description": "Memperbarui info menu, harga, ketersediaan, atau tautan gambar."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Menu (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/menus/{{menu_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "menus",
+                "{{menu_id}}"
+              ]
+            },
+            "description": "Menghapus menu berdasarkan ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Menu Ingredients (Admin & Koki)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/menus/{{menu_id}}/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "menus",
+                "{{menu_id}}",
+                "ingredients"
+              ]
+            },
+            "description": "Melihat daftar takaran bahan baku resep untuk menu tertentu."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Ingredient to Menu Recipe (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data && res.data.id) {",
+                  "        pm.collectionVariables.set(\"ingredient_id\", res.data.id);",
+                  "        console.log(\"ingredient_id berhasil disimpan:\", res.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"inventory_id\": \"{{inventory_id}}\",\n    \"quantity_needed\": 0.2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/menus/{{menu_id}}/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "menus",
+                "{{menu_id}}",
+                "ingredients"
+              ]
+            },
+            "description": "Menambahkan atau memperbarui takaran bahan baku resep (misal: 1 porsi butuh 0.2 kg Beras)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Ingredient from Menu Recipe (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/menus/{{menu_id}}/ingredients/{{ingredient_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "menus",
+                "{{menu_id}}",
+                "ingredients",
+                "{{ingredient_id}}"
+              ]
+            },
+            "description": "Menghapus bahan baku dari resep menu."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Manajemen Inventaris (Inventory)",
+      "item": [
+        {
+          "name": "Get All Inventory (Admin, Kasir, Koki)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory"
+              ]
+            },
+            "description": "Melihat seluruh stok persediaan bahan baku gudang/dapur restoran."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Inventory By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/{{inventory_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "{{inventory_id}}"
+              ]
+            },
+            "description": "Melihat detail satu item bahan baku."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Bahan Baku Baru (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data && res.data.id) {",
+                  "        pm.collectionVariables.set(\"inventory_id\", res.data.id);",
+                  "        console.log(\"inventory_id berhasil disimpan:\", res.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"item_name\": \"Beras Premium\",\n    \"quantity\": 50,\n    \"unit\": \"kg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory"
+              ]
+            },
+            "description": "Menambahkan data master bahan baku baru ke gudang."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Stok / Penyesuaian Bahan (Admin & Koki)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"quantity\": 45,\n    \"unit\": \"kg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/{{inventory_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "{{inventory_id}}"
+              ]
+            },
+            "description": "Memperbarui jumlah stok bahan (bisa dilakukan Admin atau Koki saat penyesuaian bahan dapur)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Bahan Baku (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/{{inventory_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "inventory",
+                "{{inventory_id}}"
+              ]
+            },
+            "description": "Menghapus bahan baku dari database."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Manajemen Pesanan (Orders - Auto Stock Deduct)",
+      "item": [
+        {
+          "name": "Get All Orders (Admin, Kasir, Koki)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Melihat seluruh daftar antrean pesanan pelanggan."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{order_id}}"
+              ]
+            },
+            "description": "Melihat detail satu transaksi pesanan."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Order - AUTO POTONG STOK (Kasir & Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var res = pm.response.json();",
+                  "    if (res.data && res.data.order && res.data.order.id) {",
+                  "        pm.collectionVariables.set(\"order_id\", res.data.order.id);",
+                  "        console.log(\"order_id berhasil disimpan:\", res.data.order.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"customer_name\": \"Budi Santoso\",\n    \"status\": \"pending\",\n    \"items\": [\n        {\n            \"menu_id\": \"{{menu_id}}\",\n            \"qty\": 2\n        }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Membuat pesanan baru oleh Kasir/Admin.\nAlur Otomasi:\n1. Sistem memeriksa ketersediaan bahan resep menu di inventaris.\n2. Jika ada bahan tidak cukup -> request DITOLAK (HTTP 400).\n3. Jika semua bahan cukup -> stok inventaris LANGSUNG DIPOTONG otomatis dan pesanan tersimpan."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Status: Sedang Dimasak \"cooking\" (Koki)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"cooking\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            },
+            "description": "Koki memperbarui status bahwa hidangan sedang dalam proses memasak di dapur."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Status: Siap Saji \"ready\" (Koki)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"ready\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            },
+            "description": "Koki memperbarui status hidangan telah selesai dimasak dan siap diantar ke meja pelanggan."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Status: Selesai Bayar \"completed\" (Kasir)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"completed\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            },
+            "description": "Kasir menandai transaksi selesai setelah menerima pembayaran dari pelanggan."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Status: Dibatalkan \"cancelled\" (AUTO KEMBALIKAN STOK)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"cancelled\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{order_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            },
+            "description": "Jika pesanan dibatalkan (cancelled), sistem secara OTOMATIS mengembalikan kuantitas bahan baku yang sebelumnya dipotong kembali ke stok inventaris."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

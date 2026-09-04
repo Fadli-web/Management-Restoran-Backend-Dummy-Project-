@@ -7,14 +7,29 @@ const createMenuSchema = Joi.object({
         'any.required': 'Nama menu wajib diisi'
     }),
     description: Joi.string().trim().allow('', null).default(''),
-    price: Joi.number().min(0).required().messages({
+    price: Joi.alternatives().try(
+        Joi.number().min(0),
+        Joi.string().pattern(/^\d+(\.\d+)?$/)
+    ).required().messages({
         'number.base': 'Harga menu harus berupa angka',
         'number.min': 'Harga menu tidak boleh bernilai negatif',
         'any.required': 'Harga menu wajib diisi'
     }),
-    is_available: Joi.boolean().default(true).messages({
-        'boolean.base': 'Status ketersediaan (is_available) harus bernilai boolean (true/false)'
-    })
+    is_available: Joi.alternatives().try(
+        Joi.boolean(),
+        Joi.string().valid('true', 'false', '1', '0')
+    ).default(true),
+    image_url: Joi.string().allow('', null).optional(),
+    image: Joi.string().allow('', null).optional(),
+    gambar: Joi.string().allow('', null).optional(),
+    foto: Joi.string().allow('', null).optional(),
+    category: Joi.string().allow('', null).optional(),
+    kategori: Joi.string().allow('', null).optional(),
+    jenis: Joi.string().allow('', null).optional(),
+    nama: Joi.string().allow('', null).optional(),
+    nama_menu: Joi.string().allow('', null).optional(),
+    harga: Joi.any().optional(),
+    deskripsi: Joi.any().optional()
 });
 
 const updateMenuSchema = Joi.object({
@@ -23,21 +38,35 @@ const updateMenuSchema = Joi.object({
         'string.min': 'Nama menu minimal harus 2 karakter'
     }),
     description: Joi.string().trim().allow('', null),
-    price: Joi.number().min(0).messages({
+    price: Joi.alternatives().try(
+        Joi.number().min(0),
+        Joi.string().pattern(/^\d+(\.\d+)?$/)
+    ).messages({
         'number.base': 'Harga menu harus berupa angka',
         'number.min': 'Harga menu tidak boleh bernilai negatif'
     }),
-    is_available: Joi.boolean().messages({
-        'boolean.base': 'Status ketersediaan (is_available) harus bernilai boolean (true/false)'
-    })
+    is_available: Joi.alternatives().try(
+        Joi.boolean(),
+        Joi.string().valid('true', 'false', '1', '0')
+    ),
+    image_url: Joi.string().allow('', null).optional(),
+    image: Joi.string().allow('', null).optional(),
+    gambar: Joi.string().allow('', null).optional(),
+    foto: Joi.string().allow('', null).optional(),
+    category: Joi.string().allow('', null).optional(),
+    kategori: Joi.string().allow('', null).optional(),
+    jenis: Joi.string().allow('', null).optional(),
+    nama: Joi.string().allow('', null).optional(),
+    nama_menu: Joi.string().allow('', null).optional(),
+    harga: Joi.any().optional(),
+    deskripsi: Joi.any().optional()
 }).min(1).messages({
     'object.min': 'Setidaknya harus ada satu data yang diperbarui'
 });
 
 const addIngredientSchema = Joi.object({
-    inventory_id: Joi.string().guid({ version: ['uuidv4', 'uuidv5'] }).required().messages({
+    inventory_id: Joi.string().required().messages({
         'string.empty': 'ID bahan baku (inventory_id) tidak boleh kosong',
-        'string.guid': 'Format inventory_id harus berupa UUID yang valid',
         'any.required': 'ID bahan baku (inventory_id) wajib diisi'
     }),
     quantity_needed: Joi.number().positive().required().messages({

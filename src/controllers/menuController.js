@@ -55,10 +55,36 @@ exports.getMenuById = async (req, res) => {
  */
 exports.createMenu = async (req, res) => {
     try {
-        const { name, description, price, is_available = true } = req.body;
+        let { name, description, price, is_available = true, image_url } = req.body;
+
+        // Jika ada upload file gambar via Multer
+        if (req.file) {
+            image_url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        } else if (!image_url && req.body.image) {
+            image_url = req.body.image;
+        } else if (!image_url && req.body.gambar) {
+            image_url = req.body.gambar;
+        }
+
+        // Normalisasi tipe data jika dikirim via multipart/form-data
+        if (typeof price === 'string') {
+            price = parseFloat(price);
+        }
+        if (typeof is_available === 'string') {
+            is_available = is_available === 'true' || is_available === '1';
+        }
+
+        const insertPayload = {
+            name,
+            description: description || '',
+            price,
+            is_available: is_available !== undefined ? is_available : true,
+            image_url: image_url || null
+        };
+
         const { data, error } = await supabase
             .from('menus')
-            .insert([{ name, description, price, is_available }])
+            .insert([insertPayload])
             .select()
             .single();
 
@@ -75,7 +101,34 @@ exports.createMenu = async (req, res) => {
 exports.updateMenu = async (req, res) => {
     try {
         const { id } = req.params;
-        const updateData = req.body;
+        const updateData = { ...req.body };
+
+        if (req.file) {
+            updateData.image_url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        } else if (!updateData.image_url && updateData.image) {
+            updateData.image_url = updateData.image;
+        } else if (!updateData.image_url && updateData.gambar) {
+            updateData.image_url = updateData.gambar;
+        }
+
+        // Hapus field pembantu yang bukan kolom di tabel menus
+        delete updateData.image;
+        delete updateData.gambar;
+        delete updateData.foto;
+        delete updateData.category;
+        delete updateData.kategori;
+        delete updateData.jenis;
+        delete updateData.nama;
+        delete updateData.nama_menu;
+        delete updateData.harga;
+        delete updateData.deskripsi;
+
+        if (updateData.price !== undefined && typeof updateData.price === 'string') {
+            updateData.price = parseFloat(updateData.price);
+        }
+        if (updateData.is_available !== undefined && typeof updateData.is_available === 'string') {
+            updateData.is_available = updateData.is_available === 'true' || updateData.is_available === '1';
+        }
 
         const { data, error } = await supabase
             .from('menus')
@@ -118,7 +171,7 @@ exports.getMenuIngredients = async (req, res) => {
         const { data, error } = await supabase
             .from('menu_ingredients')
             .select('id, menu_id, inventory_id, quantity_needed, created_at, inventory(id, item_name, unit, quantity)')
-            .eq('menu_id', id);
+            .eq('menu_id', menu_id);
 
         if (error) return res.status(500).json({ status: 'error', message: error.message });
         res.status(200).json({ status: 'success', data });

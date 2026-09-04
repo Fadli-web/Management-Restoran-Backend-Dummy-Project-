@@ -1,9 +1,12 @@
 const Joi = require('joi');
 
 const orderItemSchema = Joi.object({
-    menu_id: Joi.string().guid({ version: ['uuidv4', 'uuidv5'] }).required().messages({
+    menu_id: Joi.alternatives().try(
+        Joi.string().guid({ version: ['uuidv4', 'uuidv5'] }),
+        Joi.string(),
+        Joi.number()
+    ).required().messages({
         'string.empty': 'menu_id tidak boleh kosong',
-        'string.guid': 'menu_id harus berupa format UUID yang valid',
         'any.required': 'menu_id wajib diisi untuk setiap item'
     }),
     qty: Joi.number().integer().min(1).required().messages({
